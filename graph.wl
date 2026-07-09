@@ -12,62 +12,44 @@ comma-on-its-own-line separators.";
 Begin["`Private`"]
 
 graphDiameter[graph_Association] := Module[
-  {n, edges, isDirected, A, wasChange, best, s, timesAttained2, ret},
+  {n, edges, isDirected, A, timesAttained2, ret},
 
   n = graph["n"];
-  edges = graph["edges"];        (* list of {a, b}, 0-indexed to mirror C++ *)
+  edges = graph["edges"];        (* List of 0-indexed {a,b} edge pairs *)
   isDirected = graph["isDirected"];
 
-  (* Initialize A[i][j] = n for all i,j - matches C++'s use of n as an
-     "infinity" sentinel (unreachable pairs can never actually need a
-     path of length n in an n-vertex graph, so it works as +infinity). *)
+  (* Initialize the distance matrix. *)
   A = ConstantArray[n, {n, n}];
 
-  (* Set edge weights to 1. C++ uses 0-indexed vertex labels directly as
-     array indices; here we add 1 to land in Wolfram's 1-indexed arrays,
-     but the vertex labels themselves are untouched. *)
+  (* Assign distance 1 to every edge. *)
   Do[
     (
       A[[edge[[1]] + 1, edge[[2]] + 1]] = 1;
-      If[!isDirected, A[[edge[[2]] + 1, edge[[1]] + 1]] = 1]
+      If[!isDirected,
+        A[[edge[[2]] + 1, edge[[1]] + 1]]
+      ] = 1
     ),
     {edge, edges}
   ];
 
-  (* Zero the diagonal - done AFTER edge assignment, same order as C++,
-     so a self-loop edge (a,a) would be overwritten back to 0 here too. *)
-  Do[A[[i, i]] = 0, {i, 1, n}];
-
-  (* Repeated full (i,j,k) relaxation sweep, driven by wasChange, exactly
-     as in the C++ code. NOTE: this is NOT standard Floyd-Warshall (which
-     has k as the outermost loop and needs only one pass) - it's a less
-     efficient variant that repeats the whole i/j/k sweep until nothing
-     changes. Preserved here intentionally to match the original logic. *)
-  wasChange = True;
-  While[wasChange,
-    wasChange = False;
-    Do[
-      (
-        best = A[[i, j]];
-        Do[
-          (
-            s = A[[i, k]] + A[[k, j]];
-            If[s < best,
-              best = s;
-              wasChange = True;
-            ]
-          ),
-          {k, 1, n}
-        ];
-        A[[i, j]] = best;
-      ),
-      {i, 1, n}, {j, 1, n}
-    ]
+  (* Set every vertex's distance to itself to 0. *)
+  Do[
+    A[[i, i]] = 0,
+    {i, 1, n}
   ];
 
-  (* Find the max entry in A and count how many (i,j) pairs attain it *)
+  (* Compute all-pairs shortest-path distances using the
+     Floyd-Warshall algorithm. *)
+  Do[
+    A[[i, j]] = Min[A[[i, j]], A[[i, k]] + A[[k, j]]],
+    {k, 1, n}, {i, 1, n}, {j, 1, n}
+  ];
+
+  (* Find the graph diameter (maximum finite shortest-path distance)
+     and count the number of ordered vertex pairs attaining it. *)
   timesAttained2 = 0;
   ret = 0;
+
   Do[
     (
       If[A[[i, j]] > ret,
@@ -91,7 +73,6 @@ graphToString[graph_Association] := Module[{n, edges, m, lines, body},
 
   lines = Table["(" <> ToString[edge[[1]]] <> "," <> ToString[edge[[2]]] <> ")", {edge, edges}];
 
-  (* "\n,\n" reproduces: edge-line, newline, comma, newline, next-edge-line *)
   body = If[m > 0, StringRiffle[lines, "\n,\n"], ""];
 
   If[m > 0,
