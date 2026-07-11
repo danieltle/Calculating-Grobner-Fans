@@ -1,3 +1,9 @@
+(* File:    Graph.wl    *)
+(* Author:  Daniel Le   *)
+(* Date:    07/10/2026  *)
+
+(* Compute graph diameters and convert graph data structures to the string *)
+
 BeginPackage["Graph`"]
 
 graphDiameter::usage = "graphDiameter[graph_Association] returns {diameter, timesAttained}. \
