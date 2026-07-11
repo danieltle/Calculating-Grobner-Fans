@@ -1,3 +1,10 @@
+(* File:    lp.wl       *)
+(* Author:  Daniel Le   *)
+(* Date:    07/10/2026  *)
+
+(* Defines a generic linear programming solver interface, *)
+(* solver registry, and utility functions                 *)
+
 BeginPackage["LpSolver`"]
 
 (* Public Interface Functions *)
